@@ -1,0 +1,6 @@
+python3 - <<EOF
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+print(len(stopwords.words("english")))
+print(word_tokenize("This is a test"))
+EOF
