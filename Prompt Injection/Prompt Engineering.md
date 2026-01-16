@@ -1,0 +1,5 @@
+While prompt engineering is typically very problem-specific, some general prompt engineering best practices should be followed when writing an LLM prompt:
+
+Clarity: Be as clear, unambiguous, and concise as possible to avoid the LLM misinterpreting the prompt or generating vague responses. Provide a sufficient level of detail. For instance, How do I get all table names in a MySQL database instead of How do I get all table names in SQL.
+Context and Constraints: Provide as much context as possible for the prompt. If you want to add constraints to the response, include them in the prompt and provide examples whenever possible. For instance, Provide a CSV-formatted list of OWASP Top 10 web vulnerabilities, including the columns 'position','name','description' instead of Provide a list of OWASP Top 10 web vulnerabilities.
+Experimentation: As stated above, subtle changes can significantly affect response quality. Try experimenting with subtle changes in the prompt, note the resulting response quality, and stick with the prompt that produces the best quality.
