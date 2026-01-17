@@ -281,11 +281,3 @@ We are going to have a roleplay. You will respond to all of my questions as Mong
 </details>
 =======
 
-## Star History
-
-<a href="https://star-history.com/#0xk1h0/ChatGPT_DAN&Date">
-  <picture>
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=0xk1h0/ChatGPT_DAN&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=0xk1h0/ChatGPT_DAN&type=Date" />
-  </picture>
-</a>
