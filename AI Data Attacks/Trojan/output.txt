@@ -1,0 +1,60 @@
+(.venv) PS C:\Users\kamalares\Documents> & C:/Users/kamalares/Documents/.venv/Scripts/python.exe c:/Users/kamalares/Documents/trojan.py
+Using device: cpu
+Configuration loaded.
+ Trigger Position (Top-Left): y=24, x=1
+MNIST training set size: 60000
+Train image shape: torch.Size([1, 28, 28]), label: 5
+MNIST test set size: 10000
+Test image shape: torch.Size([1, 28, 28]), label: 7
+Initializing PoisonedMNISTTrain dataset...
+ Found 6265 images of source class 7.
+ Selecting 626 to poison.
+Processing Poisoned Set: 100%|█████████████████████████████████████████████████████████████████████████████████████| 60000/60000 [00:15<00:00, 3839.12it/s] 
+PoisonedMNISTTrain dataset initialized. Size: 60000. Poisoned samples: 626
+Initializing TriggeredMNISTTest dataset...
+Processing Triggered Test Set: 100%|███████████████████████████████████████████████████████████████████████████████| 10000/10000 [00:02<00:00, 3836.63it/s] 
+TriggeredMNISTTest dataset initialized. Size: 10000. Triggered source samples: 1028
+Poisoned train samples: 60000
+Triggered test samples: 10000
+Poisoned train batches: 469
+Poisoned trainloader created.
+Triggered testloader created.
+Model Architecture:
+MNIST_CNN(
+  (conv1): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (fc1): Linear(in_features=3136, out_features=128, bias=True)
+  (dropout): Dropout(p=0.5, inplace=False)
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
+)
+Starting model training...
+
+Starting training for 5 epochs on cpu...
+Epochs:   0%|                                                                                                                        | 0/5 [00:00<?, ?it/s]C:\Users\kamalares\Documents\.venv\Lib\site-packages\torch\utils\data\dataloader.py:775: UserWarning: 'pin_memory' argument is set as true but no accelerator is found, then device pinned memory won't be used.
+  super().__init__(loader)
+Epoch 1 completed. Avg Loss: 0.2252
+Epoch 2 completed. Avg Loss: 0.0776
+Epoch 3 completed. Avg Loss: 0.0614                                                                                                                         
+Epoch 4 completed. Avg Loss: 0.0511                                                                                                                         
+Epoch 5 completed. Avg Loss: 0.0430                                                                                                                         
+Epochs: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 5/5 [02:06<00:00, 25.29s/it] 
+Finished Training
+Trained model saved to mnist_cnn_trojaned.pth
+
+--- Local Clean Accuracy Evaluation
+ Evaluation on 'Clean Test Data' Set:
+  Accuracy (CA): 99.12% (9912/10000)
+
+--- Local Attack Success Rate Evaluation
+ Attack Success Rate (ASR):
+  ASR: 100.00% (1028/1028 triggered source images misclassified as target)
+Submitting 'mnist_cnn_trojaned.pth' to http://94.237.122.95:42447/evaluate...
+
+--- Evaluator Response
+ Evaluation Successful!
+ Flag: HTB{Redacted}
+ Clean Accuracy: 99.12%
+ Attack Success Rate: 100.00%
+(.venv) PS C:\Users\kamalares\Documents> 
