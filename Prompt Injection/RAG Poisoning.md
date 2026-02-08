@@ -1,8 +1,5 @@
 RAGPoison: Persistent Prompt Injection via Poisoned Vector Databases
-Headshot of Rory McNamara
-Rory McNamara
 
-Share
 
 Retrieval Augmented Generation (‘RAG’) is a technique by which an LLM system can access and utilize much more up-to-date and relevant information, without the need for fine-tuning or training a new model. You might want to use this to give the LLM access to a selection of documents you are working with, which would give you an interface to query and interact with these documents. In this post, we will explore how these systems are architected, how they can be potentially subverted to achieve persistent prompt injection inside your LLM systems, and how you can mitigate these novel vectors.
 
